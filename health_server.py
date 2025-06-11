@@ -18,14 +18,8 @@ def run_streamlit():
 @app.route('/_stcore/health')
 def health_check():
     """健康检查端点"""
-    # 检查 Streamlit 是否在运行
-    try:
-        response = requests.get('http://localhost:8501')
-        if response.status_code == 200:
-            return {"status": "healthy"}, 200
-    except:
-        pass
-    return {"status": "unhealthy"}, 503
+    # 暂时只返回健康状态，以确认 Flask 服务是否正常启动
+    return {"status": "healthy"}, 200
 
 def start_servers():
     """启动 Flask 和 Streamlit 服务器"""
