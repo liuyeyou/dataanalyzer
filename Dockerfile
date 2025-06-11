@@ -38,4 +38,4 @@ HEALTHCHECK --interval=30s --timeout=60s --start-period=120s --retries=10 \
     CMD curl -f http://localhost:${PORT}/_stcore/health || exit 1
 
 # Start Streamlit application from the virtual environment
-CMD source .venv/bin/activate && streamlit run --server.address 0.0.0.0 --server.port $PORT --logger.level debug app.py 
+CMD ["/app/.venv/bin/streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "${PORT}", "--logger.level", "debug"] 
