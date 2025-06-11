@@ -1,0 +1,25 @@
+[server]
+port = 8501
+address = "0.0.0.0"
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+# 隐藏部署按钮和主菜单
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[client]
+# 隐藏菜单和工具栏
+toolbarMode = "minimal"
+showSidebarNavigation = false
+
+[theme]
+# 自定义主题（可选）
+primaryColor = "#F63366"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif" 
