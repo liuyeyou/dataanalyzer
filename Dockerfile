@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements.txt first to leverage Docker cache
+COPY requirements.txt .
+
 # Create and activate virtual environment, install dependencies
 RUN python3 -m venv .venv && \
     .venv/bin/pip install --upgrade pip && \
