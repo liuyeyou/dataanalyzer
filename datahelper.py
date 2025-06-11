@@ -15,7 +15,7 @@ from pydantic import Field, ConfigDict
 class CustomDeepseekChat(BaseChatModel):
     """自定义 Deepseek Chat 模型"""
     
-    api_url: str = Field(default="http://119.63.197.152:8903/v1/chat/completions")
+    api_url: Optional[str] = Field(default_factory=lambda: os.getenv("DEEPSEEK_API_URL"))
     api_headers: Dict[str, str] = Field(default={"Content-Type": "application/json"})
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
@@ -26,6 +26,9 @@ class CustomDeepseekChat(BaseChatModel):
         run_manager: Optional[Any] = None,
         **kwargs: Any,
     ) -> ChatResult:
+        if not self.api_url:
+            raise ValueError("DEEPSEEEK_API_URL is not set for CustomDeepseekChat")
+
         # 添加系统提示要求输出中文
         system_message = {"role": "system", "content": "请用中文回答所有问题，保持专业性和准确性。"}
         formatted_messages = [system_message]
@@ -69,7 +72,11 @@ if not google_api_key:
 
 # 初始化 LLMs
 llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
-llm_deepseek = CustomDeepseekChat()
+
+# 只有当 DEEPSEEK_API_URL 存在时才初始化 llm_deepseek
+llm_deepseek = None
+if os.getenv("DEEPSEEK_API_URL"):
+    llm_deepseek = CustomDeepseekChat()
 
 # 默认使用 Gemini
 selected_llm = llm_gemini
@@ -79,10 +86,10 @@ def set_llm(llm_name):
     global selected_llm
     if llm_name.lower() == "gemini":
         selected_llm = llm_gemini
-    elif llm_name.lower() == "deepseek":
+    elif llm_name.lower() == "deepseek" and llm_deepseek:
         selected_llm = llm_deepseek
     else:
-        raise ValueError(f"Unknown LLM: {llm_name}")
+        raise ValueError(f"Unknown LLM or Deepseek API URL not configured: {llm_name}")
 
 def detect_file_encoding(filename):
     """
@@ -237,5 +244,35 @@ def ask_question(filename, question):
         agent_executor_kwargs={"handle_parsing_errors": "True"},
     )
 
-    AI_response = pandas_agent.run(f"请用中文回答关于数据集的问题： {question}")
+    base_prompt = f"""
+    请分析以下问题: "{question}"
+
+    要求：
+    1. 如果问题涉及数值分析：
+       - 提供具体的数据支持
+       - 计算相关的统计指标
+       - 说明数据的变化情况
+
+    2. 如果问题涉及趋势分析：
+       - 分析整体趋势
+       - 找出关键的变化点
+       - 解释可能的原因
+
+    3. 如果问题涉及比较：
+       - 详细列出比较项的具体数据
+       - 分析差异和变化
+       - 探讨变化的原因
+
+    4. 补充分析：
+       - 如果发现异常或特殊情况，请说明
+       - 如果有相关的业务建议，请提出
+       - 如果需要更多上下文信息，请说明
+
+    请用中文回答，注意：
+    - 保持专业性和准确性
+    - 数据分析要有逻辑性
+    - 结论要有数据支持
+    """
+    
+    AI_response = pandas_agent.run(base_prompt)
     return AI_response
