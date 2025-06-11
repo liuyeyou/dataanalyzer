@@ -1,7 +1,6 @@
 # Import necessary libraries
 import streamlit as st
 import datahelper
-from health_check import check_health
 
 # Initialize session state for data loading and input fields
 if "dataload" not in st.session_state:
@@ -46,7 +45,7 @@ st.divider()
 st.sidebar.subheader("设置")
 llm_option = st.sidebar.selectbox(
     "选择语言模型",
-    ["Gemini", "Deepseek"],
+    ["Gemini"],
     index=0
 )
 datahelper.set_llm(llm_option)
@@ -63,11 +62,6 @@ load_data_btn = st.sidebar.button(
 
 # Main layout
 col_prework, col_dummy, col_interaction = st.columns([4, 1, 7])
-
-# Health check route
-if st.experimental_get_query_params().get("_stcore") == ["health"]:
-    st.json(check_health())
-    st.stop()
 
 if st.session_state.dataload:
 
