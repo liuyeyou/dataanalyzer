@@ -2,7 +2,6 @@ import os
 import json
 import requests
 import pandas as pd
-import streamlit as st # Added import for Streamlit
 from typing import Any, List, Optional, Dict
 from dotenv import load_dotenv
 from langchain_experimental.agents.agent_toolkits.pandas.base import (
@@ -16,7 +15,7 @@ from pydantic import Field, ConfigDict
 class CustomDeepseekChat(BaseChatModel):
     """自定义 Deepseek Chat 模型"""
     
-    api_url: str = Field(default=os.getenv("DEEPSEEK_API_URL", "http://119.63.197.152:8903/v1/chat/completions")) # Get from env var
+    api_url: str = Field(default="http://119.63.197.152:8903/v1/chat/completions")
     api_headers: Dict[str, str] = Field(default={"Content-Type": "application/json"})
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
@@ -62,37 +61,26 @@ class CustomDeepseekChat(BaseChatModel):
 
 load_dotenv()
 
-# 使用 st.cache_resource 缓存 LLM 实例
-@st.cache_resource
-def get_gemini_llm():
-    google_api_key = os.getenv("GOOGLE_API_KEY")
-    if not google_api_key:
-        st.error("GOOGLE_API_KEY not found in environment variables.")
-        st.stop()
-    return ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
+# 初始化 API 密钥
+google_api_key = os.getenv("GOOGLE_API_KEY")
 
-@st.cache_resource
-def get_deepseek_llm():
-    return CustomDeepseekChat()
+if not google_api_key:
+    raise ValueError("GOOGLE_API_KEY not found in environment variables")
 
-# 移除全局 LLM 实例初始化
-# llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
-# llm_deepseek = CustomDeepseekChat()
+# 初始化 LLMs
+llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
+llm_deepseek = CustomDeepseekChat()
 
-# 默认选择LLM名称，而非实例
-# selected_llm = "gemini" # This will be managed by st.session_state
+# 默认使用 Gemini
+selected_llm = llm_gemini
 
 def set_llm(llm_name):
-    """设置要使用的 LLM 名称，并存储在 session_state 中"""
-    st.session_state.selected_llm_name = llm_name.lower()
-
-def get_current_llm():
-    """获取当前选定的 LLM 实例"""
-    llm_name = st.session_state.get("selected_llm_name", "gemini") # Default to gemini
-    if llm_name == "gemini":
-        return get_gemini_llm()
-    elif llm_name == "deepseek":
-        return get_deepseek_llm()
+    """设置要使用的 LLM"""
+    global selected_llm
+    if llm_name.lower() == "gemini":
+        selected_llm = llm_gemini
+    elif llm_name.lower() == "deepseek":
+        selected_llm = llm_deepseek
     else:
         raise ValueError(f"Unknown LLM: {llm_name}")
 
@@ -176,11 +164,8 @@ def summerize_csv(filename):
         print(f"处理日期列时出错：{str(e)}")
         raise
 
-    # 获取当前选定的 LLM 实例
-    current_llm = get_current_llm()
-
     pandas_agent = create_pandas_dataframe_agent(
-        llm=current_llm,
+        llm=selected_llm,
         df=df,
         verbose=True,
         allow_dangerous_code=True,
@@ -230,11 +215,8 @@ def get_dataframe(filename):
 def analyze_trend(filename, variable):
     df = get_dataframe(filename)
     
-    # 获取当前选定的 LLM 实例
-    current_llm = get_current_llm()
-
     pandas_agent = create_pandas_dataframe_agent(
-        llm=current_llm,
+        llm=selected_llm,
         df=df,
         verbose=True,
         allow_dangerous_code=True,
@@ -247,11 +229,8 @@ def analyze_trend(filename, variable):
 def ask_question(filename, question):
     df = get_dataframe(filename)
     
-    # 获取当前选定的 LLM 实例
-    current_llm = get_current_llm()
-
     pandas_agent = create_pandas_dataframe_agent(
-        llm=current_llm,
+        llm=selected_llm,
         df=df,
         verbose=True,
         allow_dangerous_code=True,

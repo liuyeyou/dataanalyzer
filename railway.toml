@@ -1,12 +1,11 @@
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "NIXPACKS"
 
 [deploy]
 healthcheckPath = "/_stcore/health"
 healthcheckTimeout = 480
 restartPolicyType = "on_failure"
-startCommand = "streamlit run --server.address=0.0.0.0 --server.port=${PORT} app.py"
+startCommand = "streamlit run --server.address 0.0.0.0 --server.port $PORT app.py"
 
 [deploy.env]
 STREAMLIT_SERVER_PORT = "8501"
