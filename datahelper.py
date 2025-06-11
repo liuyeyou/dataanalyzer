@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import pandas as pd
+import streamlit as st # Added import for Streamlit
 from typing import Any, List, Optional, Dict
 from dotenv import load_dotenv
 from langchain_experimental.agents.agent_toolkits.pandas.base import (
@@ -15,7 +16,7 @@ from pydantic import Field, ConfigDict
 class CustomDeepseekChat(BaseChatModel):
     """自定义 Deepseek Chat 模型"""
     
-    api_url: str = Field(default="http://119.63.197.152:8903/v1/chat/completions")
+    api_url: str = Field(default=os.getenv("DEEPSEEK_API_URL", "http://119.63.197.152:8903/v1/chat/completions")) # Get from env var
     api_headers: Dict[str, str] = Field(default={"Content-Type": "application/json"})
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
@@ -61,26 +62,37 @@ class CustomDeepseekChat(BaseChatModel):
 
 load_dotenv()
 
-# 初始化 API 密钥
-google_api_key = os.getenv("GOOGLE_API_KEY")
+# 使用 st.cache_resource 缓存 LLM 实例
+@st.cache_resource
+def get_gemini_llm():
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    if not google_api_key:
+        st.error("GOOGLE_API_KEY not found in environment variables.")
+        st.stop()
+    return ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
 
-if not google_api_key:
-    raise ValueError("GOOGLE_API_KEY not found in environment variables")
+@st.cache_resource
+def get_deepseek_llm():
+    return CustomDeepseekChat()
 
-# 初始化 LLMs
-llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
-llm_deepseek = CustomDeepseekChat()
+# 移除全局 LLM 实例初始化
+# llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0, google_api_key=google_api_key)
+# llm_deepseek = CustomDeepseekChat()
 
-# 默认使用 Gemini
-selected_llm = llm_gemini
+# 默认选择LLM名称，而非实例
+# selected_llm = "gemini" # This will be managed by st.session_state
 
 def set_llm(llm_name):
-    """设置要使用的 LLM"""
-    global selected_llm
-    if llm_name.lower() == "gemini":
-        selected_llm = llm_gemini
-    elif llm_name.lower() == "deepseek":
-        selected_llm = llm_deepseek
+    """设置要使用的 LLM 名称，并存储在 session_state 中"""
+    st.session_state.selected_llm_name = llm_name.lower()
+
+def get_current_llm():
+    """获取当前选定的 LLM 实例"""
+    llm_name = st.session_state.get("selected_llm_name", "gemini") # Default to gemini
+    if llm_name == "gemini":
+        return get_gemini_llm()
+    elif llm_name == "deepseek":
+        return get_deepseek_llm()
     else:
         raise ValueError(f"Unknown LLM: {llm_name}")
 
@@ -164,8 +176,11 @@ def summerize_csv(filename):
         print(f"处理日期列时出错：{str(e)}")
         raise
 
+    # 获取当前选定的 LLM 实例
+    current_llm = get_current_llm()
+
     pandas_agent = create_pandas_dataframe_agent(
-        llm=selected_llm,
+        llm=current_llm,
         df=df,
         verbose=True,
         allow_dangerous_code=True,
@@ -209,111 +224,39 @@ def get_dataframe(filename):
     except Exception as e:
         print(f"处理日期列时出错：{str(e)}")
         raise
-    
+
     return df
 
 def analyze_trend(filename, variable):
-    df = read_csv_with_encoding(filename, low_memory=False)
+    df = get_dataframe(filename)
     
-    try:
-        # 智能检测日期列
-        date_column = get_date_column(df)
-        print(f"使用 '{date_column}' 作为日期列")
-        
-        # 将日期列转换为datetime，只保留年月日
-        df[date_column] = pd.to_datetime(df[date_column]).dt.date
-        
-        # 如果列名不是'日期'，重命名为'日期'以保持一致性
-        if date_column != '日期':
-            df = df.rename(columns={date_column: '日期'})
-    except Exception as e:
-        print(f"处理日期列时出错：{str(e)}")
-        raise
+    # 获取当前选定的 LLM 实例
+    current_llm = get_current_llm()
 
     pandas_agent = create_pandas_dataframe_agent(
-        llm=selected_llm,
+        llm=current_llm,
         df=df,
         verbose=True,
-        agent_executor_kwargs={"handle_parsing_errors": "True"},
         allow_dangerous_code=True,
+        agent_executor_kwargs={"handle_parsing_errors": "True"},
     )
 
-    trend_response = pandas_agent.run(
-        f"请简要解释这个变量的趋势：{variable}。请用中文回答。数据集的行是按时间顺序排列的，所以你可以通过查看数据集的行来解释趋势。"
-    )
-
-    return trend_response
+    response = pandas_agent.run(f"请用中文分析 \"{variable}\" 的趋势")
+    return response
 
 def ask_question(filename, question):
-    df = read_csv_with_encoding(filename, low_memory=False)
+    df = get_dataframe(filename)
     
-    try:
-        # 智能检测日期列
-        date_column = get_date_column(df)
-        print(f"使用 '{date_column}' 作为日期列")
-        
-        # 将日期列转换为datetime，只保留年月日
-        df[date_column] = pd.to_datetime(df[date_column]).dt.date
-        
-        # 如果列名不是'日期'，重命名为'日期'以保持一致性
-        if date_column != '日期':
-            df = df.rename(columns={date_column: '日期'})
-    except Exception as e:
-        print(f"处理日期列时出错：{str(e)}")
-        raise
+    # 获取当前选定的 LLM 实例
+    current_llm = get_current_llm()
 
     pandas_agent = create_pandas_dataframe_agent(
-        llm=selected_llm,
+        llm=current_llm,
         df=df,
         verbose=True,
-        agent_executor_kwargs={"handle_parsing_errors": "True"},
         allow_dangerous_code=True,
+        agent_executor_kwargs={"handle_parsing_errors": "True"},
     )
 
-    # 检查是否是日期收入比较问题
-    if "收入" in question and any(date in question for date in ["2025", "月", "日"]):
-        enhanced_prompt = f"""
-        请对 {question} 进行详细分析，要求：
-        
-        1. 基础数据对比：
-           - 两个日期的具体收入数据
-           - 计算具体的变化金额和百分比
-        
-        2. 收入构成分析：
-           - 分解各个收入来源（如web端、金币等）的具体数据
-           - 计算每个收入来源的变化幅度
-           - 找出变化最大的收入来源
-        
-        3. 变化原因分析：
-           - 对比各收入来源的具体变化情况
-           - 分析每个收入来源变化的可能原因
-           - 重点解释变化最显著的部分
-        
-        4. 相关指标分析：
-           - 分析相关的业务指标（如有）
-           - 探讨指标变化与收入变化的关系
-        
-        5. 建议和预测：
-           - 基于数据给出具体的改进建议
-           - 如果看到任何异常趋势，请特别指出
-        
-        请用中文回答，确保：
-        - 提供具体的数字和百分比
-        - 分点列出各项分析结果
-        - 重点标出异常或显著的变化
-        """
-        AI_response = pandas_agent.run(enhanced_prompt)
-    else:
-        # 对于其他类型的问题，添加基础提示
-        base_prompt = f"""
-        请对问题 "{question}" 进行分析，要求：
-        1. 提供具体的数据支持
-        2. 解释数据背后的含义
-        3. 如果发现异常或特殊情况，请特别说明
-        4. 如果可能，提供相关的建议
-        
-        请用中文回答，保持专业性和准确性。
-        """
-        AI_response = pandas_agent.run(base_prompt)
-
+    AI_response = pandas_agent.run(f"请用中文回答关于数据集的问题： {question}")
     return AI_response
