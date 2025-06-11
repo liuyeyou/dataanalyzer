@@ -1,37 +1,72 @@
+# Import necessary libraries
 import streamlit as st
-
 import datahelper
 
+# Initialize session state for data loading and input fields
 if "dataload" not in st.session_state:
     st.session_state.dataload = False
+if "variable_input" not in st.session_state:
+    st.session_state.variable_input = ""
+if "question_input" not in st.session_state:
+    st.session_state.question_input = ""
 
-
+# Function to activate data loading and reset inputs
 def activate_dataload():
     st.session_state.dataload = True
+    st.session_state.variable_input = ""
+    st.session_state.question_input = ""
 
-
-st.set_page_config(page_title="Data Analyzer 🤖", layout="wide")
-st.image("./image/banner2.png", use_container_width=True)
-st.title("🤖 LLM Agent Data analyzer ")
-st.divider()
-
-
-# Sidebar
-st.sidebar.subheader("Load your data")
-st.sidebar.divider()
-
-loaded_file = st.sidebar.file_uploader("Chose your csv data", type="csv")
-load_data_btn = st.sidebar.button(
-    label="Load", on_click=activate_dataload, use_container_width=True
+# Configure the Streamlit page
+st.set_page_config(
+    page_title="数据分析助手 🤖", 
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
 )
 
-# Main
+# 隐藏 Streamlit 默认的菜单和页脚
+hide_streamlit_style = """
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+.stDeployButton {display: none;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
+st.title("LLM 智能数据分析助手")
+st.divider()
+
+# Sidebar configuration
+st.sidebar.subheader("设置")
+llm_option = st.sidebar.selectbox(
+    "选择语言模型",
+    ["Gemini", "Deepseek"],
+    index=0
+)
+datahelper.set_llm(llm_option)
+
+st.sidebar.divider()
+st.sidebar.subheader("加载数据")
+#st.sidebar.divider()
+
+# File uploader for CSV files
+loaded_file = st.sidebar.file_uploader("选择 CSV 数据文件", type="csv")
+load_data_btn = st.sidebar.button(
+    label="加载", on_click=activate_dataload, use_container_width=True
+)
+
+# Main layout
 col_prework, col_dummy, col_interaction = st.columns([4, 1, 7])
 
 if st.session_state.dataload:
 
-    @st.cache_data
+    # Function to summarize data
+    @st.cache_data(ttl=0)  # 设置缓存时间为0，每次都重新加载
     def summerize():
         loaded_file.seek(0)
         data_summary = datahelper.summerize_csv(filename=loaded_file)
@@ -39,33 +74,39 @@ if st.session_state.dataload:
 
     data_summary = summerize()
 
+    # Display data overview
     with col_prework:
-        st.info("Data summary")
-        st.subheader("Sample of Data")
+        st.info("数据摘要")
+        st.subheader("数据样本")
         st.write(data_summary["initial_data_sample"])
         st.divider()
-        st.subheader("Features of Data")
-        st.write(data_summary["column_descriptions"])
-        st.divider()
-        st.subheader("Missing values of Data")
-        st.write(data_summary["missing_values"])
-        st.divider()
-        st.subheader("Dupplicate values of Data")
-        st.write(data_summary["dupplicate_values"])
-        st.divider()
-        st.subheader("Summary Statistics of Data")
+        st.subheader("统计摘要")
         st.write(data_summary["essential_metrics"])
+        st.divider()
+        st.subheader("数据特征")
+        st.write(data_summary["column_descriptions"])
+        
+        # st.subheader("缺失值统计")
+        # st.write(data_summary["missing_values"])
+        # st.divider()
+        # st.subheader("重复值统计")
+        # st.write(data_summary["dupplicate_values"])
+        # st.divider()
+        
+        
 
     with col_dummy:
         st.empty()
 
+    # Interaction section
     with col_interaction:
-        st.info("Interaction")
-        variable = st.text_input(label="Which feature do you want to analyze?")
-        exemine_btn = st.button("Exemine")
+        st.info("交互分析")
+        variable = st.text_input(label="请输入要分析的指标名称", key="variable_input")
+        exemine_btn = st.button("分析")
         st.divider()
 
-        @st.cache_data
+        # Function to explore a variable
+        @st.cache_data(ttl=0)  # 设置缓存时间为0，每次都重新加载
         def explore_variable(data_file, variable):
             data_file.seek(0)
             dataframe = datahelper.get_dataframe(filename=data_file)
@@ -82,11 +123,12 @@ if st.session_state.dataload:
         if variable or exemine_btn:
             explore_variable(data_file=loaded_file, variable=variable)
 
-        free_question = st.text_input(label="What do you want to know about dataset?")
-        ask_btn = st.button(label="Ask Question")
+        free_question = st.text_input(label="请输入您想了解的数据问题", key="question_input")
+        ask_btn = st.button(label="提问")
         st.divider()
 
-        @st.cache_data
+        # Function to answer questions about the dataset
+        @st.cache_data(ttl=0)  # 设置缓存时间为0，每次都重新加载
         def answer_question(data_file, free_question):
             data_file.seek(0)
             AI_response = datahelper.ask_question(

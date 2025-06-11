@@ -4,14 +4,11 @@ matplotlib
 pandas
 numpy
 seaborn
-openai
 langchain
 langchainhub
-langchain-openai
-langchain-anthropic
 langchain-google-genai
 langchain_experimental
-langchain_cohere
+requests
 tabulate
 black
 isort
