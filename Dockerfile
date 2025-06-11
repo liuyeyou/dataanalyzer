@@ -30,11 +30,5 @@ ENV STREAMLIT_SERVER_ENABLE_CORS=false
 ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 ENV GOOGLE_API_KEY=[REDACTED_GOOGLE_API_KEY]
 
-# Health check command
-# Use $PORT provided by Railway
-HEALTHCHECK --interval=30s --timeout=60s --start-period=300s --retries=15 \
-    CMD curl -f http://localhost:${PORT}/_stcore/health || exit 1
-
-# Start Streamlit application from the virtual environment
-# Use sh -c to ensure $PORT is expanded
-CMD ["/bin/sh", "-c", "/app/.venv/bin/streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0 --logger.level debug"]
+# Keep container alive, actual start command is in railway.toml
+CMD ["tail", "-f", "/dev/null"]
