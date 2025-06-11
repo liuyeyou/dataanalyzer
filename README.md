@@ -27,8 +27,8 @@
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/CHANGCHANGCCRR/data-analyzer.git
-cd data-analyzer
+git clone https://github.com/CHANGCHANGCCRR/dataAnalyzer.git
+cd dataAnalyzer
 ```
 
 2. 创建虚拟环境：
