@@ -65,7 +65,7 @@ class CustomDeepseekChat(BaseChatModel):
 load_dotenv()
 
 # 初始化 API 密钥
-google_api_key = os.getenv("GOOGLE_API_KEY")
+google_api_key = "AIzaSyDT2WMlb-t7ienDhaYv3RENEs7ML3UlfE0"
 
 if not google_api_key:
     raise ValueError("GOOGLE_API_KEY not found in environment variables")
