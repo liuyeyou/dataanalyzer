@@ -7,4 +7,4 @@ cmds = [
 ]
 
 [start]
-cmd = "source .venv/bin/activate && streamlit run --server.address 0.0.0.0 --server.port $PORT --logger.level debug app.py" 
+cmd = "set -ex && echo 'Activating venv and starting Streamlit...' && source .venv/bin/activate && echo 'Venv activated. Running Streamlit...' && sleep 5 && streamlit run --server.address 0.0.0.0 --server.port $PORT --logger.level debug app.py" 
