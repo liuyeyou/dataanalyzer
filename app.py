@@ -44,7 +44,7 @@ st.divider()
 st.sidebar.subheader("设置")
 llm_option = st.sidebar.selectbox(
     "选择语言模型",
-    ["Gemini", "Deepseek"],
+    ["Gemini"],
     index=0
 )
 datahelper.set_llm(llm_option)
