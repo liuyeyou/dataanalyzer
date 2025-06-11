@@ -6,14 +6,15 @@ dockerfilePath = "Dockerfile"
 healthcheckPath = "/_stcore/health"
 healthcheckTimeout = 180
 restartPolicyType = "on_failure"
-startCommand = "streamlit run --server.address=0.0.0.0 --server.port=8501 app.py"
+startCommand = "python health_server.py"
 
 [deploy.env]
-PORT = "8501"
+PORT = "8502"
 STREAMLIT_SERVER_PORT = "8501"
 STREAMLIT_SERVER_ADDRESS = "0.0.0.0"
 STREAMLIT_SERVER_HEADLESS = "true"
 STREAMLIT_SERVER_FILE_WATCHER_TYPE = "none"
 STREAMLIT_SERVER_ENABLE_CORS = "false"
 STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION = "false"
-GOOGLE_API_KEY = "[REDACTED_GOOGLE_API_KEY]" 
+GOOGLE_API_KEY = "[REDACTED_GOOGLE_API_KEY]"
+FLASK_ENV = "production" 

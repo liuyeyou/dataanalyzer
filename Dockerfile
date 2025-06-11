@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set environment variables
-ENV PORT=8501
+ENV PORT=8502
 ENV STREAMLIT_SERVER_PORT=8501
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ENV STREAMLIT_SERVER_HEADLESS=true
@@ -28,12 +28,16 @@ ENV STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
 ENV STREAMLIT_SERVER_ENABLE_CORS=false
 ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 ENV GOOGLE_API_KEY=[REDACTED_GOOGLE_API_KEY]
+ENV FLASK_ENV=production
 
-EXPOSE 8501
+EXPOSE 8501 8502
 
-# 增加启动等待时间，确保服务完全启动
+# 使用更简单的健康检查
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=5 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+    CMD curl -f http://localhost:8502/_stcore/health || exit 1
+
+# 启动健康检查服务器
+CMD ["python", "health_server.py"]
 
 # 使用shell形式的CMD以便能使用环境变量
 CMD echo "Starting Streamlit..." && \
