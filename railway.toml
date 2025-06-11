@@ -1,6 +1,5 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt"
 
 [deploy]
 startCommand = "streamlit run app.py"
@@ -9,4 +8,5 @@ healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 
 [deploy.env]
-PYTHON_VERSION = "3.9.18" 
+PORT = "8501"
+STREAMLIT_SERVER_PORT = "8501" 
