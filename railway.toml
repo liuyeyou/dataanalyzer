@@ -6,10 +6,9 @@ dockerfilePath = "Dockerfile"
 healthcheckPath = "/_stcore/health"
 healthcheckTimeout = 480
 restartPolicyType = "on_failure"
-startCommand = "streamlit run --server.address=0.0.0.0 --server.port=8501 app.py"
+startCommand = "streamlit run --server.address=0.0.0.0 --server.port=${PORT} app.py"
 
 [deploy.env]
-PORT = "8501"
 STREAMLIT_SERVER_PORT = "8501"
 STREAMLIT_SERVER_ADDRESS = "0.0.0.0"
 STREAMLIT_SERVER_HEADLESS = "true"
