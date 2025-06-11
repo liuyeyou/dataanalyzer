@@ -22,7 +22,7 @@ RUN python3 -m venv .venv && \
 COPY . .
 
 # Set environment variables (optional, can be moved to railway.toml for Railway)
-ENV STREAMLIT_SERVER_PORT=8501
+# Railway automatically injects PORT, no need to set it here
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
@@ -30,11 +30,11 @@ ENV STREAMLIT_SERVER_ENABLE_CORS=false
 ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 ENV GOOGLE_API_KEY=[REDACTED_GOOGLE_API_KEY]
 
-EXPOSE 8501
-
 # Health check command
+# Use $PORT provided by Railway
 HEALTHCHECK --interval=30s --timeout=60s --start-period=300s --retries=15 \
     CMD curl -f http://localhost:${PORT}/_stcore/health || exit 1
 
-# Keep container alive, actual start command is in railway.toml
-CMD ["tail", "-f", "/dev/null"] 
+# Start Streamlit application from the virtual environment
+# Use sh -c to ensure $PORT is expanded
+CMD ["/bin/sh", "-c", "/app/.venv/bin/streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0 --logger.level debug"]
