@@ -17,7 +17,7 @@ pd.set_option('display.max_columns', None)
 
 # --- 页面配置 ---
 st.set_page_config(
-    page_title="LLM 智能数据分析助手", 
+    page_title="LLM智能数据分析助手", 
     layout="wide",
     initial_sidebar_state="expanded",
 )
