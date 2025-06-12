@@ -33,12 +33,27 @@ hide_streamlit_style = """
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 .stDeployButton {display: none;}
+
+/* 减少侧边栏中"设置"标题上方的间距 */
+[data-testid="stSidebarContent"] [data-testid="stHeading"] {
+    margin-top: -30px; /* 可以根据需要调整这个值 */
+}
+
+/* 减少主标题"LLM 智能数据分析助手"上方的间距 */
+[data-testid="stVerticalBlock"] [data-testid="stMarkdownContainer"] h1 {
+    margin-top: -80px; /* 负值会向上移动，请根据需要调整 */
+}
+
+/* 隐藏 Streamlit 应用程序头部 */
+[data-testid="stHeader"] {
+    display: none;
+}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 st.title("LLM 智能数据分析助手")
-st.divider()
+#st.divider()
 
 # Sidebar configuration
 st.sidebar.subheader("设置")
@@ -132,5 +147,5 @@ if st.session_state.dataload:
             st.success(AI_response)
             return
 
-        if free_question or ask_btn:
+        if free_question and ask_btn:
             answer_question(data_file=loaded_file, free_question=free_question)

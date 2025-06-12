@@ -91,20 +91,6 @@ def set_llm(llm_name):
     else:
         raise ValueError(f"Unknown LLM or Deepseek API URL not configured: {llm_name}")
 
-def detect_file_encoding(filename):
-    """
-    检测文件编码并返回编码类型
-    """
-    encodings = ['utf-8', 'gbk', 'gb2312', 'big5', 'utf-16']
-    for encoding in encodings:
-        try:
-            with open(filename, 'r', encoding=encoding) as f:
-                f.read()
-                return encoding
-        except UnicodeDecodeError:
-            continue
-    raise UnicodeDecodeError(f"无法检测文件编码，尝试过的编码：{encodings}")
-
 def get_date_column(df):
     """
     智能检测日期列
@@ -117,41 +103,20 @@ def get_date_column(df):
         if col in df.columns:
             return col
             
-    # 如果没有找到常见的日期列名，尝试通过数据类型推断
-    for col in df.columns:
-        # 尝试将列转换为日期格式
-        try:
-            pd.to_datetime(df[col])
-            return col
-        except:
-            continue
-            
     # 如果还是没找到，打印所有列名并抛出异常
-    raise ValueError(f"无法找到日期列。当前文件包含以下列：{', '.join(df.columns)}")
+    raise ValueError(f"无法找到日期列。请确保包含以下常见日期列名之一: {date_column_names}。当前文件包含以下列：{', '.join(df.columns)}")
 
 def read_csv_with_encoding(filename, **kwargs):
     """
     智能读取 CSV 文件，自动处理编码问题
     """
+    # 假设文件编码为 utf-8，并移除自动检测编码和回退逻辑
     try:
-        # 首先尝试检测编码
-        encoding = detect_file_encoding(filename)
-        df = pd.read_csv(filename, encoding=encoding, **kwargs)
-        # 打印列名，帮助调试
-        print(f"成功读取文件，包含以下列：{', '.join(df.columns)}")
+        df = pd.read_csv(filename, encoding='utf-8', **kwargs)
+        print(f"成功读取文件（使用 utf-8 编码），包含以下列：{', '.join(df.columns)}")
         return df
     except Exception as e:
-        # 如果检测失败，尝试常用编码
-        encodings = ['utf-8', 'gbk', 'gb2312', 'big5', 'utf-16']
-        for encoding in encodings:
-            try:
-                df = pd.read_csv(filename, encoding=encoding, **kwargs)
-                print(f"成功读取文件（使用 {encoding} 编码），包含以下列：{', '.join(df.columns)}")
-                return df
-            except UnicodeDecodeError:
-                continue
-        # 如果所有编码都失败，抛出异常
-        raise UnicodeDecodeError(f"无法读取文件，尝试过的编码：{encodings}")
+        raise UnicodeDecodeError(f"无法读取文件，请确保文件是 UTF-8 编码且格式正确: {e}")
 
 def summerize_csv(filename):
     df = read_csv_with_encoding(filename, low_memory=False)
@@ -187,13 +152,11 @@ def summerize_csv(filename):
         f"请用中文创建一个数据集列的表格。包含列名和列的描述。"
     )
 
-    data_summary["missing_values"] = pandas_agent.run(
-        "请用中文回答：数据集中是否有缺失值？如果有，有多少个？回答格式应该是'该数据集中有X个缺失值'"
-    )
+    # 移除 LLM 调用以获取缺失值信息
+    data_summary["missing_values"] = "已禁用此功能以提高性能。"
 
-    data_summary["dupplicate_values"] = pandas_agent.run(
-        "请用中文回答：数据集中是否有重复值？如果有，有多少个？回答格式应该是'该数据集中有X个重复值'"
-    )
+    # 移除 LLM 调用以获取重复值信息
+    data_summary["dupplicate_values"] = "已禁用此功能以提高性能。"
 
     data_summary["essential_metrics"] = df.describe()
 
@@ -245,10 +208,10 @@ def ask_question(filename, question):
     )
 
     base_prompt = f"""
-    请分析以下问题: "{question}"
+    你已经拥有了完整的数据集df，请直接基于df进行分析和查询，不要尝试加载或重新创建数据。针对日期相关的问题，请确保直接查询df中的日期列，不要生成新的日期数据。请用中文分析以下问题: "{question}"
 
     要求：
-    1. 如果问题涉及数值分析：
+        1. 如果问题涉及数值分析：
        - 提供具体的数据支持
        - 计算相关的统计指标
        - 说明数据的变化情况
@@ -272,7 +235,11 @@ def ask_question(filename, question):
     - 保持专业性和准确性
     - 数据分析要有逻辑性
     - 结论要有数据支持
-    """
     
+
+    - 始终用中文回答。
+    - 详细分析并给出原因。
+    - 如果需要进行计算，请直接使用df进行计算，不要再次加载数据。"
+    """
     AI_response = pandas_agent.run(base_prompt)
     return AI_response
