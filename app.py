@@ -2,8 +2,14 @@ import streamlit as st
 import pandas as pd
 import pandasai as pai
 import os
+import matplotlib
+
+# Set the backend to a non-interactive one BEFORE importing pyplot
+matplotlib.use('AGG')
+
 from pandasai_openai import OpenAI, AzureOpenAI
 from pandasai_litellm import LiteLLM
+from pandasai.core.response.dataframe import DataFrameResponse
 
 # 设置 pandas 显示所有列，防止数据被截断
 pd.set_option('display.max_columns', None)
@@ -42,6 +48,7 @@ with st.sidebar:
 # --- 主体内容 ---
 st.title("LLM 智能数据分析助手 v0.3 (pandas-ai)")
 
+
 # 创建一个容器来显示数据样本，确保它总是在顶部
 data_container = st.container()
 
@@ -51,7 +58,12 @@ if "messages" not in st.session_state:
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        if message.get("type") == "image":
+            st.image(message["content"], caption="历史图表")
+        elif message.get("type") == "table":
+            st.dataframe(pd.DataFrame(message["content"]))
+        else:
+            st.markdown(message["content"])
 
 if uploaded_file is not None:
     # 使用 pandas 读取 CSV
@@ -107,41 +119,43 @@ if uploaded_file is not None:
             try:
                 # 使用 v3 Agent, 先将 pandas.DataFrame 包装成 pandasai.DataFrame
                 pai_df = pai.DataFrame(df)
-                # 构建指令 Prompt
-                system_prompt = """
 
-                你现在是一名专业的数据分析师，面前是一整份已加载完整的数据表格（DataFrame），请严格依据此表格作答，不得假设数据不完整或使用任何虚构信息。
-                请严格遵循以下输出结构：
+                # 定义系统 Prompt
+                system_prompt = """你现在是一名专业的数据分析师，请严格依据用户提供的 DataFrame 作答。
 
-                📊【数据简述】
+**回答要求：**
+1.  **数据驱动：** 所有分析和结论必须基于表格中的数据，明确列出引用的数据列和数值。
+2.  **深度分析：** 进行必要的统计计算（如均值、增长率、占比），并解释计算过程和结果的业务含义。
+3.  **逻辑严谨：** 结论需有清晰的逻辑支撑，避免空泛或推测性的描述。
+4.  **结构化输出：** 请严格按照以下 Markdown 格式进行回答，每个要点独占一行，不要使用 JSON 或字典格式。
+5.  **中文回答：** 全部使用中文。
 
-                - 涉及的字段有哪些？数据总共有多少天？涉及哪些关键收入项？
-                - 当前问题关注的时间区间是哪几天？
+**输出格式：**
+```markdown
+📊【数据简述】
+- **核心字段:** [用于分析的关键字段列表]
+- **数据范围:** [分析所涉及的时间或其他维度范围]
+- **样本量:** [所分析的数据行数]
 
-                📉【数值分析】
+📉【数值分析】
+- **[指标]变化:** [具体数值对比], 差值: [差值], 变化率: [变化率]
+- **[收入构成]分析:** [各部分收入的占比及变化情况]
 
-                - 提供关键字段的对比数据（包括绝对值、差值、变化率）
-                - 用简洁条目列出每一项变化，保留2位小数
+🔎【趋势与异常】
+- **趋势变化:** [上升/下降/平稳]，并结合数据说明。
+- **异常点:** [是否存在异常数据点，如有请指出并分析]。
 
-                🔎【趋势与异常】
+📌【原因推测】
+- **主要原因:** [基于数据分析，推断导致变化的核心原因，例如：XX收入下降是总收入降低的主要原因]。
+- **次要原因:** [其他影响因素]。
 
-                - 指出趋势变化（增长、下降、震荡）
-                - 识别异常点（骤升/骤降、缺失值、边缘值等）
-
-                📌【原因推测】
-
-                - 给出可能导致现象的业务/数据原因
-                - 避免主观猜测，需基于数据合理分析
-
-
-                📢【建议与行动】
-
-                - 提出基于分析结果的业务建议、改进方向或后续验证方法
-
-                请执行如下要求：
-                1. 请用中文作答，逻辑清晰，语言专业，禁止使用“我认为”、“可能是因为”这类模糊表达。
-                2. 禁止读取外部文件或进行任何形式的数据假设。
-                """
+📢【建议与行动】
+- **业务建议:** [针对分析结果，提出具体的业务操作建议]。
+- **改进方向:** [可以从哪些方面着手改进]。
+- **后续验证:** [如何跟踪和验证建议措施的效果]。
+```"""
+                save_path = os.path.join(os.getcwd(), "exports/charts")
+                os.makedirs(save_path, exist_ok=True)  # 自动创建目录（如不存在）
                 # 初始化 PandasAI Agent
                 agent = pai.Agent(pai_df, config={
                     "llm": llm,
@@ -149,18 +163,55 @@ if uploaded_file is not None:
                     "verbose": True,
                     "conversational": False,
                     "use_sql": False, # 禁用 SQL 查询以避免内部 bug
+                    "custom_whitelisted_dependencies": ["pandas"],
+                    "prompt": system_prompt,
+                     "save_charts_path": save_path,  # ✅ 新增：图表输出目录
                 })
 
-                final_prompt = f"{system_prompt}\n我的问题是：{question}"
-
                 # 获取回答
-                answer = agent.chat(final_prompt)
+                answer = agent.chat(question)
 
                 # 显示AI回答
                 with st.chat_message("assistant"):
-                    st.markdown(answer)
-                # 记录AI回答
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                    # 1. 图表展示（本地 PNG 路径）
+                    if isinstance(answer, str) and answer.endswith('.png') and os.path.exists(answer):
+                        # 如果是 PandasAI 生成的图表路径，显示图片
+                        st.image(answer, caption="AI 生成的图表")
+                        # 保存消息用于回显，不用写成 markdown
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "type": "image",
+                            "content": answer
+                        })
+
+                    # 2. 表格结果（DataFrameResponse 类型）
+                    elif isinstance(answer, DataFrameResponse):
+                        df_to_display = answer.value
+                        st.dataframe(df_to_display)
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "type": "table",
+                            "content": df_to_display.to_dict()
+                        })
+
+                    # 3. 普通字符串文本（分析结果、自然语言解释等）
+                    elif isinstance(answer, str):
+                        st.markdown(answer)
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "type": "text",
+                            "content": answer
+                        })
+
+                    # 4. 兜底处理（未知类型）
+                    else:
+                        st.markdown(str(answer))
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "type": "text",
+                            "content": str(answer)
+                        })
+
 
             except Exception as e:
                 st.error("AI 分析失败，请检查数据格式或问题内容。")
