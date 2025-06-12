@@ -47,7 +47,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("选择 CSV 数据文件", type="csv")
 
 # --- 主体内容 ---
-st.title("LLM 智能数据分析助手 v0.3 (pandas-ai)")
+st.title("LLM 智能数据分析助手")
 
 
 # 创建一个容器来显示数据样本，确保它总是在顶部
