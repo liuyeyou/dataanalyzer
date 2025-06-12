@@ -3,6 +3,7 @@ import pandas as pd
 import pandasai as pai
 import os
 import matplotlib
+import re
 
 # Set the backend to a non-interactive one BEFORE importing pyplot
 matplotlib.use('AGG')
@@ -16,7 +17,7 @@ pd.set_option('display.max_columns', None)
 
 # --- 页面配置 ---
 st.set_page_config(
-    page_title="LLM 智能数据分析助手 v0.3(pandas-ai)", 
+    page_title="LLM 智能数据分析助手", 
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -68,6 +69,18 @@ for message in st.session_state.messages:
 if uploaded_file is not None:
     # 使用 pandas 读取 CSV
     df = pd.read_csv(uploaded_file)
+
+    # 清理列名，去除特殊字符
+    def clean_column_names(df):
+        new_columns = {}
+        for col in df.columns:
+            # 使用正则表达式去除所有非字母、非数字、非中文字符，下划线除外
+            new_col = re.sub(r'[^\w\u4e00-\u9fa5]', '', str(col))
+            new_columns[col] = new_col
+        df.rename(columns=new_columns, inplace=True)
+        return df
+
+    df = clean_column_names(df)
     
     # 在顶部的容器中显示数据信息
     with data_container:
