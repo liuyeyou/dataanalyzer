@@ -1,50 +1,29 @@
 import streamlit as st
-import datahelper
+import pandas as pd
+import pandasai as pai
+import os
+from pandasai_openai import OpenAI, AzureOpenAI
+from pandasai_litellm import LiteLLM
 
-# Initialize session state for data loading and input fields
-if "dataload" not in st.session_state:
-    st.session_state.dataload = False
-if "variable_input" not in st.session_state:
-    st.session_state.variable_input = ""
-if "question_input" not in st.session_state:
-    st.session_state.question_input = ""
+# 设置 pandas 显示所有列，防止数据被截断
+pd.set_option('display.max_columns', None)
 
-# Function to activate data loading and reset inputs
-def activate_dataload():
-    st.session_state.dataload = True
-    st.session_state.variable_input = ""
-    st.session_state.question_input = ""
-
-# Configure the Streamlit page
+# --- 页面配置 ---
 st.set_page_config(
-    page_title="数据分析助手 🤖", 
+    page_title="LLM 智能数据分析助手 v0.3(pandas-ai)", 
     layout="wide",
     initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': None,
-        'Report a bug': None,
-        'About': None
-    }
 )
 
-# 隐藏 Streamlit 默认的菜单和页脚
+# --- 注入自定义 CSS ---
 hide_streamlit_style = """
 <style>
+/* 隐藏主菜单和页脚 */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 .stDeployButton {display: none;}
 
-/* 减少侧边栏中"设置"标题上方的间距 */
-[data-testid="stSidebarContent"] [data-testid="stHeading"] {
-    margin-top: -30px; /* 可以根据需要调整这个值 */
-}
-
-/* 减少主标题"LLM 智能数据分析助手"上方的间距 */
-[data-testid="stVerticalBlock"] [data-testid="stMarkdownContainer"] h1 {
-    margin-top: -80px; /* 负值会向上移动，请根据需要调整 */
-}
-
-/* 隐藏 Streamlit 应用程序头部 */
+/* 隐藏 Streamlit 头部白条 */
 [data-testid="stHeader"] {
     display: none;
 }
@@ -52,100 +31,118 @@ footer {visibility: hidden;}
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-st.title("LLM 智能数据分析助手")
-#st.divider()
+# --- 侧边栏 ---
+with st.sidebar:
+    st.subheader("设置")
+    llm_option = st.selectbox("选择语言模型", ["GPT-4o", "Gemini", "Deepseek"], index=0)
+    st.divider()
+    st.subheader("加载数据")
+    uploaded_file = st.file_uploader("选择 CSV 数据文件", type="csv")
 
-# Sidebar configuration
-st.sidebar.subheader("设置")
-llm_option = st.sidebar.selectbox(
-    "选择语言模型",
-    ["Gemini"],
-    index=0
-)
-datahelper.set_llm(llm_option)
+# --- 主体内容 ---
+st.title("LLM 智能数据分析助手 v0.3 (pandas-ai)")
 
-st.sidebar.divider()
-st.sidebar.subheader("加载数据")
-#st.sidebar.divider()
+# 创建一个容器来显示数据样本，确保它总是在顶部
+data_container = st.container()
 
-# File uploader for CSV files
-loaded_file = st.sidebar.file_uploader("选择 CSV 数据文件", type="csv")
-load_data_btn = st.sidebar.button(
-    label="加载", on_click=activate_dataload, use_container_width=True
-)
+# 初始化或显示聊天记录
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Main layout
-col_prework, col_dummy, col_interaction = st.columns([4, 1, 7])
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Note: Removed the custom health check here from previous attempts
-# if st.experimental_get_query_params().get("_stcore") == ["health"]:
-#     st.json(check_health())
-#     st.stop()
-
-if st.session_state.dataload:
-
-    # Function to summarize data
-    @st.cache_data(ttl=0)  # 设置缓存时间为0，每次都重新加载
-    def summerize():
-        loaded_file.seek(0)
-        data_summary = datahelper.summerize_csv(filename=loaded_file)
-        return data_summary
-
-    data_summary = summerize()
-
-    # Display data overview
-    with col_prework:
-        st.info("数据摘要")
-        st.subheader("数据样本")
-        st.write(data_summary["initial_data_sample"])
+if uploaded_file is not None:
+    # 使用 pandas 读取 CSV
+    df = pd.read_csv(uploaded_file)
+    
+    # 在顶部的容器中显示数据信息
+    with data_container:
+        st.success(f'数据文件 "{uploaded_file.name}" 加载成功。')
+        st.write("数据样本:", df.head())
         st.divider()
-        st.subheader("统计摘要")
-        st.write(data_summary["essential_metrics"])
-        st.divider()
-        st.subheader("数据特征")
-        st.write(data_summary["column_descriptions"])
+
+    # LLM配置
+    if llm_option == "GPT-4o":
+        api_key = os.getenv("AZURE_OPENAI_KEY")
+        api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+        if not api_key or not api_base:
+            st.error("请在环境变量中设置 AZURE_OPENAI_KEY 和 AZURE_OPENAI_ENDPOINT")
+            st.stop()
+        llm = AzureOpenAI(
+            deployment_name="deploy_gpt4o", # 假设您的 Azure 部署名称为 deploy_gpt4o
+            azure_endpoint=api_base,
+            api_token=api_key,
+            api_version="2024-02-01" # 使用一个较新的稳定 API 版本
+        )
+    elif llm_option == "Gemini":
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            st.error("请在环境变量中设置 GOOGLE_API_KEY")
+            st.stop()
+        os.environ["GEMINI_API_KEY"] = api_key # LiteLLM aoturead
+        llm = LiteLLM(model="gemini/gemini-1.5-pro-latest")
+    elif llm_option == "Deepseek":
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        api_base = os.getenv("DEEPSEEK_API_URL")
+        if not api_key or not api_base:
+            st.error("请在环境变量中设置 DEEPSEEK_API_KEY 和 DEEPSEEK_API_URL")
+            st.stop()
+        llm = OpenAI(api_token=api_key, api_base=api_base, model="deepseek-chat", is_chat_model=True)
+    else:
+        st.error("未知模型类型")
+        st.stop()
         
-    with col_dummy:
-        st.empty()
+    # 提问
+    question = st.chat_input("输入你关于数据的问题...")
+    if question:
+        # 显示用户问题
+        with st.chat_message("user"):
+            st.markdown(question)
+        # 记录用户问题
+        st.session_state.messages.append({"role": "user", "content": question})
 
-    # Interaction section
-    with col_interaction:
-        st.info("交互分析")
-        variable = st.text_input(label="请输入要分析的指标名称", key="variable_input")
-        exemine_btn = st.button("分析")
-        st.divider()
+        with st.spinner("AI 正在思考中..."):
+            try:
+                # 使用 v3 Agent, 先将 pandas.DataFrame 包装成 pandasai.DataFrame
+                pai_df = pai.DataFrame(df)
+                # 构建指令 Prompt
+                system_prompt = """
 
-        # Function to explore a variable
-        @st.cache_data(ttl=0)  # 设置缓存时间为0，每次都重新加载
-        def explore_variable(data_file, variable):
-            data_file.seek(0)
-            dataframe = datahelper.get_dataframe(filename=data_file)
-            st.bar_chart(data=dataframe, y=[variable])
-            st.divider()
+                你现在是一名专业的数据分析师，面前是一整份已加载完整的数据表格（DataFrame），请严格依据此表格作答，不得假设数据不完整或使用任何虚构信息。
 
-            data_file.seek(0)
-            trend_response = datahelper.analyze_trend(
-                filename=loaded_file, variable=variable
-            )
-            st.success(trend_response)
-            return
+                请执行如下要求：
+                1. 明确列出用于分析的数据列与具体数值；
+                2. 进行必要的统计计算（如均值、增长率、占比等）并说明计算过程；
+                3. 给出有逻辑支撑的结论，避免空泛描述；
+                4. 所有回答请使用中文，结构清晰，严谨专业；
+                5. 若问题涉及比较、趋势、归因，请结合具体数据展开分析；
+                6. 禁止读取外部文件或进行任何形式的数据假设。
+                """
+                # 初始化 PandasAI Agent
+                agent = pai.Agent(pai_df, config={
+                    "llm": llm,
+                    "enable_cache": False,
+                    "verbose": True,
+                    "conversational": False,
+                    "use_sql": False, # 禁用 SQL 查询以避免内部 bug
+                })
 
-        if variable or exemine_btn:
-            explore_variable(data_file=loaded_file, variable=variable)
+                final_prompt = f"{system_prompt}\n我的问题是：{question}"
 
-        free_question = st.text_input(label="请输入您想了解的数据问题", key="question_input")
-        ask_btn = st.button(label="提问")
-        st.divider()
+                # 获取回答
+                answer = agent.chat(final_prompt)
 
-        # Function to answer questions about the dataset
-        @st.cache_data(ttl=0)  # 设置缓存时间为0，每次都重新加载
-        def answer_question(data_file, free_question):
-            data_file.seek(0)
-            AI_response = datahelper.ask_question(
-                filename=data_file, question=free_question
-            )
-            st.success(AI_response)
-            return
+                # 显示AI回答
+                with st.chat_message("assistant"):
+                    st.markdown(answer)
+                # 记录AI回答
+                st.session_state.messages.append({"role": "assistant", "content": answer})
 
-        if free_question and ask_btn:
-            answer_question(data_file=loaded_file, free_question=free_question)
+            except Exception as e:
+                st.error("AI 分析失败，请检查数据格式或问题内容。")
+                st.exception(e)  # 更直观显示完整报错信息
+                st.stop()
+else:
+    st.info("请在左侧侧边栏上传一个 CSV 文件以开始分析。")
