@@ -57,8 +57,9 @@ def main():
             try:
                 llm = get_llm(llm_option)
                 
-                debug_container = st.expander("🐛 意图识别调试信息")
-                intents = get_intents(question, llm, debug_container)
+                #debug_container = st.expander("🐛 意图识别调试信息")
+
+                intents = get_intents(question)
                 
                 st.info(f"🤖 已识别意图: {', '.join(intents)}")
                 

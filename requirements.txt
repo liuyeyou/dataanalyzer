@@ -11,7 +11,7 @@ black>=24.1.1
 isort>=5.13.0
 plotly==5.18.0
 python-dateutil>=2.8.2
-pandasai>=3.0.0b17
+pandasai==2.3.0
 pandasai-openai
 pandasai-litellm
 google-generativeai

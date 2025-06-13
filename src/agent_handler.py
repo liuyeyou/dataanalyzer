@@ -1,15 +1,14 @@
 import pandasai as pai
 import os
-# from src.parsers import SimpleOutputParser # No longer needed
 
-def create_agent(df, llm, intent="string"):
+def create_agent(df, llm, intent):
     """
     Creates and configures a PandasAI agent with predefined prompts.
-    Dynamically sets the agent's mode based on the user's intent.
+    Uses modern v3 configuration.
     """
     pai_df = pai.DataFrame(df)
     
-    # Define prompts for the agent
+    # Define prompts using the v3 system_prompt mechanism
     system_prompt = """你现在是一名专业的数据分析师，请严格依据用户提供的 DataFrame 作答。
 
         **回答要求：**
@@ -34,7 +33,7 @@ def create_agent(df, llm, intent="string"):
         - **异常点:** [是否存在异常数据点，如有请指出并分析]。
         ```"""
     columns_text = ", ".join(df.columns.tolist())
-    dynamic_prompt = f"""
+    dynamic_prompt_addition = f"""
         你接下来将分析的表格包含以下字段：
         [{columns_text}]
         请尽可能理解用户的自然语言提问，自动匹配这些字段进行分析。
@@ -44,25 +43,20 @@ def create_agent(df, llm, intent="string"):
     save_path = os.path.join(os.getcwd(), "exports/charts")
     os.makedirs(save_path, exist_ok=True)
 
+    # Use v3-compliant configuration, letting the agent choose the best internal prompt.
     config = {
         "llm": llm,
         "enable_cache": False,
         "verbose": True,
-        "use_sql": False,
+        "use_sql": True,
         "custom_whitelisted_dependencies": ["pandas"],
-        "prompt": system_prompt + "\n\n" + dynamic_prompt,
+        "system_prompt": system_prompt + "\\n\\n" + dynamic_prompt_addition,
         "save_charts_path": save_path,
     }
 
-    # Dynamically set agent mode based on intent
-    if intent == "string":
-        config["is_conversational_answer"] = True
-        config["code_execution_config"] = {"enabled": False}
-    else:
-        # For 'plot' and 'dataframe', we need code generation.
-        config["is_conversational_answer"] = False
-
-    return pai.Agent(pai_df, config=config)
+    # The logic to dynamically set config based on intent is no longer needed in v3.
+    # The agent is smart enough to handle different output types.
+    return pai.Agent([pai_df], config=config)
 
 def chat_with_agent(agent, question: str):
     """

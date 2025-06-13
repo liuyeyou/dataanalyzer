@@ -11,15 +11,15 @@ class TextPrompt(BasePrompt):
         self.template = text
         super().__init__()
 
-def get_intents(query: str) -> list:
+def get_intents(query: str, debug_container=None) -> list:
     try:
         # Instantiate Gemini LLM via LiteLLM for intent detection
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if not api_key:
             error_message = "GEMINI_API_KEY or GOOGLE_API_KEY environment variable not set."
-            # if debug_container:
-            #     with debug_container:
-            #         st.error(error_message)
+            if debug_container:
+                with debug_container:
+                    st.error(error_message)
             raise ValueError(error_message)
 
         llm = LiteLLM(model="gemini/gemini-1.5-pro-latest", api_key=api_key)
@@ -52,19 +52,19 @@ def get_intents(query: str) -> list:
         print(f"[INTENT DEBUG] 解析后意图: {final_intents}")
 
         # Optionally display in Streamlit UI
-        # if debug_container:
-        #     with debug_container:
-        #         st.write("**LLM 原始返回:**")
-        #         st.code(raw_content)
-        #         st.write("**解析后意图:**")
-        #         st.code(str(final_intents))
+        if debug_container:
+            with debug_container:
+                st.write("**LLM 原始返回:**")
+                st.code(raw_content)
+                st.write("**解析后意图:**")
+                st.code(str(final_intents))
 
         return final_intents
     except Exception as e:
-        # if debug_container:
-        #     with debug_container:
-        #         st.error("意图识别时发生错误。")
-        #         st.exception(e)
+        if debug_container:
+            with debug_container:
+                st.error("意图识别时发生错误。")
+                st.exception(e)
         # Also log to console on error
         print(f"Error during intent detection: {e}")
         return ["string"]
