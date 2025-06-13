@@ -37,6 +37,7 @@ python3 -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 # 或
 .venv\Scripts\activate  # Windows
+
 ```
 
 3. 安装依赖：

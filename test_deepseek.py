@@ -15,7 +15,7 @@ data = {
             "role": "user"
         }
     ],
-    "temperature": 0.3,
+    "temperature": 0,
     "max_tokens": 4000,
     "stream": True
 }
