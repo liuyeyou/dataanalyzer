@@ -24,5 +24,8 @@ Based *only* on the data provided, answer the user's question. Your response MUS
 🔎 【深入原因探查】
 - 主要驱动因素: [Analyze the sub-components to find the main driver of the change. E.g., "The decrease was primarily driven by 'Web充值收入', which fell from X to Y."]
 - 其他相关观察: [Provide any other relevant insights from the data.]
+
+📈 【后续建议】
+- [Provide actionable recommendations based on the analysis. E.g., "To boost 'Web充值收入', consider running targeted promotions for web users or improving the web payment experience."]
 ```
 """ 

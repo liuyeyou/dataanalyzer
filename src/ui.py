@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-from pandasai.core.response.dataframe import DataFrameResponse
 
 def setup_page():
     """Configures the Streamlit page and injects custom CSS."""
@@ -50,25 +49,22 @@ def render_message(message):
 
 def get_response_message(answer, intent):
     """Converts an agent's answer into a message dictionary based on intent."""
-    # 0. Handle the new composite dictionary response first
-    if isinstance(answer, dict) and answer.get("type") == "dict":
-        return {"role": "assistant", "type": "multi", "content": answer["value"]}
         
     # 1. Plot response
-    if intent == "plot" and isinstance(answer, str) and answer.endswith('.png') and os.path.exists(answer):
+    if intent == "plot":
+        # The 'answer' is now the file path string
         return {"role": "assistant", "type": "image", "content": answer}
+        
     # 2. DataFrame response
-    elif intent == "dataframe" and isinstance(answer, DataFrameResponse):
+    elif intent == "dataframe":
+        # The 'answer' is now the DataFrame response object from pandasai
         return {"role": "assistant", "type": "table", "content": answer.value.to_dict()}
+        
     # 3. String response
-    elif intent == "string" and isinstance(answer, str):
+    elif intent == "string":
+        # The 'answer' is a string
         return {"role": "assistant", "type": "text", "content": answer}
-    # 4. Fallback for other types or mismatches
+        
+    # 4. Fallback for any other case
     else:
-        # Handle cases where intent doesn't match answer type gracefully
-        if isinstance(answer, DataFrameResponse):
-            return {"role": "assistant", "type": "table", "content": answer.value.to_dict()}
-        elif isinstance(answer, str) and answer.endswith('.png') and os.path.exists(answer):
-            return {"role": "assistant", "type": "image", "content": answer}
-        else:
-            return {"role": "assistant", "type": "text", "content": str(answer)} 
+        return {"role": "assistant", "type": "text", "content": str(answer)} 
