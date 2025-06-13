@@ -50,6 +50,10 @@ def render_message(message):
 
 def get_response_message(answer, intent):
     """Converts an agent's answer into a message dictionary based on intent."""
+    # 0. Handle the new composite dictionary response first
+    if isinstance(answer, dict) and answer.get("type") == "dict":
+        return {"role": "assistant", "type": "multi", "content": answer["value"]}
+        
     # 1. Plot response
     if intent == "plot" and isinstance(answer, str) and answer.endswith('.png') and os.path.exists(answer):
         return {"role": "assistant", "type": "image", "content": answer}
