@@ -45,7 +45,16 @@ def render_message(message):
     elif message.get("type") == "table":
         st.dataframe(pd.DataFrame(message["content"]))
     else:
-        st.markdown(message["content"])
+        content = str(message.get("content", ""))
+
+        # Strip the markdown code block fences if they exist
+        if content.startswith("```markdown"):
+            content = content.replace("```markdown", "", 1).strip()
+        if content.endswith("```"):
+            content = content.rsplit("```", 1)[0].strip()
+
+        # Now render the cleaned content
+        st.markdown(content, unsafe_allow_html=True)
 
 def get_response_message(answer, intent):
     """Converts an agent's answer into a message dictionary based on intent."""
@@ -67,4 +76,4 @@ def get_response_message(answer, intent):
         
     # 4. Fallback for any other case
     else:
-        return {"role": "assistant", "type": "text", "content": str(answer)} 
+        return {"role": "assistant", "type": "text", "content": str(answer)}
