@@ -1,0 +1,60 @@
+我现在需要一个测试Case。
+要求是：通过如下问题 来测试整个流程。
+使用文件 变现群小机器人收入数据.csv 来测试。
+Case1 计算下 3到6月每个月的月均总收入
+Case2 请画出2025年3月到6月月均总收入的折线图。
+Case3 分析下为什么20250601收入比20250501收入低？从多个角度分析 因为数据里有各个变现场景的数据
+
+使用文件 充值数据.csv 来测试。
+Case1 那2025年6月1日比5月1日收入下降，主要受到充值人数减少的影响还是受到充值arpu值的影响？如果充值人数减少的原因是什么，和DAU减少有关系吗？还是充值率降低了呢？同理，arpu值也是一样的推理，麻烦给我一个综合的分析判断。
+Case2 分析2025年1月至5月对比2024年的1月至5月，各字段按月求每个月的日平均值，根据每个月的日平均值同比2024年，给出分析结论
+Case3 哪天收入最高 收入是多少
+
+你看下如何实现。不要改现在已有的代码。
+
+
+
+这个prompt存在比较大的问题。 比如 请画出2025年3月到6月月均总收入的折线图。 变成了请提取2025年3月到6月的总收入数据。 完全忽略了折线图这事，
+这样就误解用户的需求了。如果四
+
+
+1 计算下 3到6月每个月的月均总收入 2 分析下为什么20250601收入比20250501收入低？
+
+🐛 操作日志
+
+Step 1: 识别用户意图和问题类型...
+
+Step 2: 使用处理代理进行统一数据检索/计算...
+
+🤖 已识别意图: dataframe, string
+
+🧐 问题类型: deep_analysis
+
+AI 分析失败，请检查数据格式或问题内容。
+
+ValueError: If using all scalar values, you must pass an index
+Traceback:
+File "/Users/xuchang/Documents/XUCHANG/code/GHC/data_analyzer_app_with_llm_agents_0611OK/app.py", line 89, in main
+    response = chat_with_agent(processing_agent, question)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/Documents/XUCHANG/code/GHC/data_analyzer_app_with_llm_agents_0611OK/src/agent_handler.py", line 62, in chat_with_agent
+    return agent.chat(question)
+           ^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/.pyenv/versions/3.11.8/envs/data-analyzer-311/lib/python3.11/site-packages/pandasai/agent/base.py", line 88, in chat
+    return self._process_query(query, output_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/.pyenv/versions/3.11.8/envs/data-analyzer-311/lib/python3.11/site-packages/pandasai/agent/base.py", line 267, in _process_query
+    result = self.execute_with_retries(code)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/.pyenv/versions/3.11.8/envs/data-analyzer-311/lib/python3.11/site-packages/pandasai/agent/base.py", line 187, in execute_with_retries
+    return self._response_parser.parse(result, code)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/.pyenv/versions/3.11.8/envs/data-analyzer-311/lib/python3.11/site-packages/pandasai/core/response/parser.py", line 18, in parse
+    return self._generate_response(result, last_code_executed)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/.pyenv/versions/3.11.8/envs/data-analyzer-311/lib/python3.11/site-packages/pandasai/core/response/parser.py", line 26, in _generate_response
+    return DataFrameResponse(result["value"], last_code_executed)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/Users/xuchang/.pyenv/versions/3.11.8/envs/data-analyzer-311/lib/python3.11/site-packages/pandasai/core/response/dataframe.py", line 10, in __init__
+    value = self.format_value(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^

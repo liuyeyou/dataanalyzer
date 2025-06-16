@@ -47,21 +47,82 @@ GUIDANCE_PROMPT_TEMPLATE = """You are a data analysis planner. Based on the user
 
 **Your Output:**
 A single paragraph providing a logical, step-by-step analysis plan. For example: "To analyze user engagement, first calculate the overall trend of 'daily active users'. Next, segment these users by 'registration_source' to identify which sources contribute the most. Finally, examine the correlation between 'user_activity_level' and 'feature_adoption_rate' to uncover patterns in behavior."
+请用中文回答
 """
 
-SIMPLIFICATION_PROMPT_TEMPLATE = """You are an expert at simplifying complex data analysis questions into a clear data extraction query. Your task is to read the user's potentially complex question and extract ONLY the core data requirements, such as specific dates, entities, or categories.
+SIMPLIFICATION_PROMPT_TEMPLATE = """You are an expert at simplifying complex data analysis questions into a clear data extraction query for a later analysis step. Your task is to read the user's potentially complex question and rephrase it into a direct command that asks for ALL relevant data connected to the core entities (like dates, products, or categories) mentioned. The goal is to gather comprehensive data, not just the specific metric in the question.
 
 **User's Original Question:**
 "{question}"
 
 **Your Output:**
-A single, direct question focused purely on data retrieval.
+A single, direct question focused on retrieving all-encompassing data for the identified entities.
 
 **Examples:**
 - **Original:** "那2025年6月1日比5月1日收入下降，主要受到充值人数减少的影响还是受到充值arpu值的影响？如果充值人数减少的原因是什么，和DAU减少有关系吗？"
-  **Your Simplified Output:** "请提取行为时间为'2025-05-01'和'2025-06-01'的所有数据。"
+  **Your Simplified Output:** "请提取'2025-05-01'和'2025-06-01'这两天的所有列的数据。"
 - **Original:** "分析一下3月份和4月份A产品的销售趋势和用户反馈"
-  **Your Simplified Output:** "请提取3月份和4月份A产品的相关数据。"
-- **Original:** "给我画一下过去三个月DAU的变化曲线"
-  **Your Simplified Output:** "请提取过去三个月的DAU数据。"
+  **Your Simplified Output:** "请提取3月份和4月份A产品的所有相关数据。"
+- **Original:** "给我画一下过去三个月DAU的变化曲线，并分析一下原因"
+  **Your Simplified Output:** "请提取过去三个月的所有相关数据。"
+"""
+
+PLOT_REQUEST_EXTRACTION_PROMPT_TEMPLATE = """From the user's query below, extract only the specific instruction for creating a plot. The output should be a concise, direct command for a plotting agent. Your response should contain only the plotting instruction and nothing else.
+
+**User's Original Question:**
+"{question}"
+
+**Your Output:**
+A single, direct question focused purely on plotting.
+
+**Examples:**
+- **Original:** "请画出2025年3月到6月月均总收入的折线图。 并分析下为什么20250601收入比20250501收入低？"
+  **Your Simplified Output:** "画出2025年3月到6月月均总收入的折线图"
+- **Original:** "分析一下3月份和4月份A产品的销售趋势和用户反馈, and also plot the sales trend"
+  **Your Simplified Output:** "Plot the sales trend for product A in March and April."
+- **Original:** "给我过去三个月DAU的变化曲线"
+  **Your Simplified Output:** "画出过去三个月的DAU变化曲线"
+"""
+
+DATAFRAME_REQUEST_EXTRACTION_PROMPT_TEMPLATE = """From the user's query below, extract only the specific instruction for creating or calculating a table of data. Do not include any instructions for plotting. If the query is only about plotting, return an empty string.
+
+**User's Original Question:**
+"{question}"
+
+**Your Output:**
+A single, direct question focused purely on data calculation and retrieval.
+
+**Examples:**
+- **Original:** "计算下 3到6月每个月的月均总收入 给出表格并画出折线图"
+  **Your Simplified Output:** "计算下 3到6月每个月的月均总收入并给出表格"
+- **Original:** "画出过去三个月的DAU变化曲线"
+  **Your Simplified Output:** ""
+- **Original:** "What is the total revenue?"
+  **Your Simplified Output:** "What is the total revenue?"
+"""
+
+ANALYSIS_TYPE_PROMPT_TEMPLATE = """You are an expert at classifying user questions about data. Classify the user's question into one of two categories: 'simple_lookup' or 'deep_analysis'.
+
+- 'simple_lookup': The user is asking for a specific data point, a simple calculation, or a direct retrieval. Examples: "What was the total revenue on May 1st?", "Which day had the highest income?", "List all transactions for user X."
+- 'deep_analysis': The user is asking for reasons, causes, comparisons, trends, or a comprehensive explanation. Examples: "Why did revenue drop in June compared to May?", "Analyze the sales trend for the last quarter.", "What are the key factors influencing user churn?"
+
+Based on the definition, classify the following question. Respond with only 'simple_lookup' or 'deep_analysis'.
+
+**User's Original Question:**
+"{question}"
+
+**Your Output:**
+"""
+
+SIMPLE_ANSWER_PROMPT_TEMPLATE = """You are a helpful data assistant. Based on the user's question and the provided data, give a direct and concise answer. Do not generate a full report, just provide the specific information requested.
+
+**User's Question:**
+{query}
+
+**Data (in CSV format):**
+```csv
+{data}
+```
+
+**Your Answer:**
 """
