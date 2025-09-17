@@ -11,3 +11,4 @@ exports/charts/
 data/
 test_reports/
 src/instruction/
+.secret_replacements.txt
