@@ -14,3 +14,23 @@ src/instruction/
 .secret_replacements.txt
 Dockerfile
 railway.toml
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.bak
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+build/
+dist/
+*.egg-info/
+.cache/
+.env.local
+src/intent_detector copy.py
+.python-version
