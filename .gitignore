@@ -8,3 +8,5 @@ exports/charts/
 .pytest_cache/
 .ipynb_checkpoints/
 *.log
+data/
+test_reports/
