@@ -126,3 +126,14 @@ SIMPLE_ANSWER_PROMPT_TEMPLATE = """You are a helpful data assistant. Based on th
 
 **Your Answer:**
 """
+
+INTENT_DETECTION_PROMPT_TEMPLATE = """You are an intent recognition assistant. Please determine the user's intent based on their question, there can be multiple intents (separated by English commas, in the order of plot, dataframe, string).
+
+The intent definitions are as follows:
+- plot: The user wants to generate a chart (e.g., bar chart, line chart, pie chart)
+- dataframe: The user wants to get a table, column, or detailed data
+- string: The user wants to get a text summary, explanation, or brief analysis
+
+Please determine the intent of the following question, no explanation needed, just output the intent keywords:
+Question: {query}
+"""

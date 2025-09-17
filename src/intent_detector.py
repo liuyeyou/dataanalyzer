@@ -3,7 +3,7 @@ from typing import List
 import streamlit as st
 from pandasai_litellm import LiteLLM
 from pandasai.core.prompts.base import BasePrompt
-from src.prompts import ANALYSIS_TYPE_PROMPT_TEMPLATE
+from src.prompts import ANALYSIS_TYPE_PROMPT_TEMPLATE, INTENT_DETECTION_PROMPT_TEMPLATE
 
 # BasePrompt is designed to be subclassed, not instantiated directly for our use case.
 # We create a simple subclass that takes a raw text string as its template.
@@ -29,17 +29,7 @@ def get_intents(query: str) -> list:
         # The Agent's purpose is to generate and execute code, which is not what we need here.
         # Instead, we can call the LLM directly.
         
-        prompt_text = f"""
-你是一个意图识别助手。请根据用户问题，判断其意图，可能有多种（用英文逗号分隔，顺序为 plot, dataframe, string）。
-
-意图定义如下：
-- plot: 用户希望生成图表（如柱状图、折线图、饼图等）
-- dataframe: 用户希望获取表格、列、或明细数据
-- string: 用户希望获得文字总结、解释或简要分析
-
-请判断以下问题的意图，不需要解释，直接输出意图关键词：
-问题：{query}
-"""
+        prompt_text = INTENT_DETECTION_PROMPT_TEMPLATE.format(query=query)
         # The llm.call() method requires a Prompt object. We use our custom TextPrompt class.
         prompt = TextPrompt(prompt_text)
         raw_content = llm.call(prompt)
