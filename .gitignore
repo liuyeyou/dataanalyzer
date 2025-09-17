@@ -12,3 +12,5 @@ data/
 test_reports/
 src/instruction/
 .secret_replacements.txt
+Dockerfile
+railway.toml
